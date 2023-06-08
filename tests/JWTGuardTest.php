@@ -48,6 +48,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->provider = Mockery::mock(EloquentUserProvider::class);
         $this->eventDispatcher = Mockery::mock(Dispatcher::class);
         $this->guard = new JWTGuard(
+            'tymon.jwt',
             $this->jwt,
             $this->provider,
             Request::create('/foo', 'GET'),

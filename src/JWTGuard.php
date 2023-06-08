@@ -74,15 +74,16 @@ class JWTGuard implements Guard
      *
      * @var string
      */
-    protected $name = 'tymon.jwt';
+    public readonly string $name;
 
     /**
      * Instantiate the class.
      *
      * @return void
      */
-    public function __construct(JWT $jwt, UserProvider $provider, Request $request, Dispatcher $eventDispatcher)
+    public function __construct(string $name,JWT $jwt, UserProvider $provider, Request $request, Dispatcher $eventDispatcher)
     {
+        $this->name = $name;
         $this->jwt = $jwt;
         $this->provider = $provider;
         $this->request = $request;
