@@ -297,4 +297,5 @@ return [
 
         'storage' => PHPOpenSourceSaver\JWTAuth\Providers\Storage\Illuminate::class,
     ],
+    'claim_pipes' => []
 ];

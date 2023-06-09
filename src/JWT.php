@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of jwt-auth.
  *
@@ -70,7 +69,6 @@ class JWT
     public function fromSubject(JWTSubject $subject)
     {
         $payload = $this->makePayload($subject);
-
         return $this->manager->encode($payload)->get();
     }
 
@@ -95,7 +93,6 @@ class JWT
     public function refresh($forceForever = false, $resetClaims = false)
     {
         $this->requireToken();
-
         return $this->manager->customClaims($this->getCustomClaims())
             ->refresh($this->token, $forceForever, $resetClaims)
             ->get();
@@ -111,9 +108,7 @@ class JWT
     public function invalidate($forceForever = false)
     {
         $this->requireToken();
-
         $this->manager->invalidate($this->token, $forceForever);
-
         return $this;
     }
 
@@ -144,7 +139,6 @@ class JWT
         } catch (JWTException $e) {
             return false;
         }
-
         return $getPayload ? $payload : true;
     }
 
@@ -162,7 +156,6 @@ class JWT
                 $this->token = null;
             }
         }
-
         return $this->token;
     }
 
@@ -178,7 +171,6 @@ class JWT
         if (!$token = $this->parser->parseToken()) {
             throw new JWTException('The token could not be parsed from the request');
         }
-
         return $this->setToken($token);
     }
 
@@ -190,7 +182,6 @@ class JWT
     public function getPayload()
     {
         $this->requireToken();
-
         return $this->manager->decode($this->token);
     }
 
@@ -236,8 +227,9 @@ class JWT
         return array_merge(
             $this->getClaimsForSubject($subject),
             $subject->getJWTCustomClaims(), // custom claims from JWTSubject method
-            $this->customClaims // custom claims from inline setter
-        );
+            $this->customClaims, // custom claims from inline setter
+            resolve(JWTTokenClaim::class)->all()
+    );
     }
 
     /**
@@ -276,7 +268,6 @@ class JWT
         if (($prv = $this->payload()->get('prv')) === null) {
             return true;
         }
-
         return $this->hashSubjectModel($model) === $prv;
     }
 
@@ -290,7 +281,6 @@ class JWT
     public function setToken($token)
     {
         $this->token = $token instanceof Token ? $token : new Token($token);
-
         return $this;
     }
 
@@ -302,7 +292,6 @@ class JWT
     public function unsetToken()
     {
         $this->token = null;
-
         return $this;
     }
 
@@ -328,7 +317,6 @@ class JWT
     public function setRequest(Request $request)
     {
         $this->parser->setRequest($request);
-
         return $this;
     }
 
@@ -342,7 +330,6 @@ class JWT
     public function lockSubject($lock)
     {
         $this->lockSubject = $lock;
-
         return $this;
     }
 
@@ -390,7 +377,7 @@ class JWT
      * Magically call the JWT Manager.
      *
      * @param string $method
-     * @param array  $parameters
+     * @param array $parameters
      *
      * @return mixed
      *
@@ -401,7 +388,6 @@ class JWT
         if (method_exists($this->manager, $method)) {
             return call_user_func_array([$this->manager, $method], $parameters);
         }
-
         throw new BadMethodCallException("Method [$method] does not exist.");
     }
 }

@@ -1,5 +1,4 @@
 <?php
-
 /*
  * This file is part of jwt-auth.
  *
@@ -34,6 +33,7 @@ use PHPOpenSourceSaver\JWTAuth\Http\Parser\QueryString;
 use PHPOpenSourceSaver\JWTAuth\JWT;
 use PHPOpenSourceSaver\JWTAuth\JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\JWTGuard;
+use PHPOpenSourceSaver\JWTAuth\JWTTokenClaim;
 use PHPOpenSourceSaver\JWTAuth\Manager;
 use PHPOpenSourceSaver\JWTAuth\Providers\JWT\Lcobucci;
 use PHPOpenSourceSaver\JWTAuth\Providers\JWT\Namshi;
@@ -246,6 +246,7 @@ abstract class AbstractServiceProvider extends ServiceProvider
             $app['tymon.jwt.manager'],
             $app['tymon.jwt.parser']
         ))->lockSubject($app->make('config')->get('jwt.lock_subject')));
+        $this->app->scoped(JWTTokenClaim::class);
     }
 
     /**
