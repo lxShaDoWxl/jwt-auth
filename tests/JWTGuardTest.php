@@ -20,9 +20,9 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
-use Mockery;
 use Mockery\LegacyMockInterface;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\UserNotDefinedException;
 use PHPOpenSourceSaver\JWTAuth\Factory;
 use PHPOpenSourceSaver\JWTAuth\JWT;
@@ -44,9 +44,9 @@ class JWTGuardTest extends AbstractTestCase
     {
         parent::setUp();
 
-        $this->jwt = Mockery::mock(JWT::class);
-        $this->provider = Mockery::mock(EloquentUserProvider::class);
-        $this->eventDispatcher = Mockery::mock(Dispatcher::class);
+        $this->jwt = \Mockery::mock(JWT::class);
+        $this->provider = \Mockery::mock(EloquentUserProvider::class);
+        $this->eventDispatcher = \Mockery::mock(Dispatcher::class);
         $this->guard = new JWTGuard(
             'tymon.jwt',
             $this->jwt,
@@ -56,16 +56,14 @@ class JWTGuardTest extends AbstractTestCase
         );
     }
 
-    /** @test */
-    public function itShouldGetTheRequest()
+    public function testItShouldGetTheRequest()
     {
         $this->assertInstanceOf(Request::class, $this->guard->getRequest());
     }
 
-    /** @test */
-    public function itShouldGetTheAuthenticatedUserIfAValidTokenIsProvided()
+    public function testItShouldGetTheAuthenticatedUserIfAValidTokenIsProvided()
     {
-        $payload = Mockery::mock(Payload::class);
+        $payload = \Mockery::mock(Payload::class);
         $payload->shouldReceive('offsetGet')->once()->with('sub')->andReturn(1);
 
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
@@ -94,10 +92,9 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertSame(1, $this->guard->userOrFail()->id);
     }
 
-    /** @test */
-    public function itShouldGetTheAuthenticatedUserIfAValidTokenIsProvidedAndNotThrowAnException()
+    public function testItShouldGetTheAuthenticatedUserIfAValidTokenIsProvidedAndNotThrowAnException()
     {
-        $payload = Mockery::mock(Payload::class);
+        $payload = \Mockery::mock(Payload::class);
         $payload->shouldReceive('offsetGet')->once()->with('sub')->andReturn(1);
 
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
@@ -123,8 +120,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertTrue($this->guard->check());
     }
 
-    /** @test */
-    public function itShouldReturnNullIfAnInvalidTokenIsProvided()
+    public function testItShouldReturnNullIfAnInvalidTokenIsProvided()
     {
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
         $this->jwt->shouldReceive('getToken')->twice()->andReturn('invalid.token.here');
@@ -136,8 +132,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertFalse($this->guard->check()); // twice
     }
 
-    /** @test */
-    public function itShouldReturnNullIfNoTokenIsProvided()
+    public function testItShouldReturnNullIfNoTokenIsProvided()
     {
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
         $this->jwt->shouldReceive('getToken')->andReturn(false);
@@ -149,8 +144,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertFalse($this->guard->check());
     }
 
-    /** @test */
-    public function itShouldThrowAnExceptionIfAnInvalidTokenIsProvided()
+    public function testItShouldThrowAnExceptionIfAnInvalidTokenIsProvided()
     {
         $this->expectException(UserNotDefinedException::class);
         $this->expectExceptionMessage('An error occurred');
@@ -165,8 +159,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->guard->userOrFail(); // twice, throws the exception
     }
 
-    /** @test */
-    public function itShouldThrowAnExceptionIfNoTokenIsProvided()
+    public function testItShouldThrowAnExceptionIfNoTokenIsProvided()
     {
         $this->expectException(UserNotDefinedException::class);
         $this->expectExceptionMessage('An error occurred');
@@ -181,8 +174,38 @@ class JWTGuardTest extends AbstractTestCase
         $this->guard->userOrFail(); // throws the exception
     }
 
-    /** @test */
-    public function itShouldReturnATokenIfCredentialsAreOkAndUserIsFound()
+    public function testItShouldGetTheAuthenticatedUserIdIfAValidTokenIsProvided()
+    {
+        $payload = \Mockery::mock(Payload::class);
+        $payload->shouldReceive('offsetGet')->once()->with('sub')->andReturn(1);
+
+        $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
+        $this->jwt->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
+        $this->jwt->shouldReceive('check')->once()->with(true)->andReturn($payload);
+        $this->jwt->shouldReceive('checkSubjectModel')
+            ->once()
+            ->with('\PHPOpenSourceSaver\JWTAuth\Test\Stubs\LaravelUserStub')
+            ->andReturn(true);
+
+        $this->provider->shouldReceive('getModel')
+            ->once()
+            ->andReturn('\PHPOpenSourceSaver\JWTAuth\Test\Stubs\LaravelUserStub');
+
+        $this->assertSame(1, $this->guard->getUserId());
+    }
+
+    public function testItShouldReturnNullForUserIdIfNoTokenIsProvided()
+    {
+        $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
+        $this->jwt->shouldReceive('getToken')->andReturn(false);
+        $this->jwt->shouldReceive('check')->never();
+        $this->jwt->shouldReceive('getPayload->get')->never();
+        $this->provider->shouldReceive('retrieveById')->never();
+
+        $this->assertNull($this->guard->getUserId());
+    }
+
+    public function testItShouldReturnATokenIfCredentialsAreOkAndUserIsFound()
     {
         $credentials = ['foo' => 'bar', 'baz' => 'bob'];
         $user = new LaravelUserStub();
@@ -214,21 +237,21 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Attempting::class));
+            ->with(\Mockery::type(Attempting::class));
 
         if (class_exists('Illuminate\Auth\Events\Validated')) {
             $this->eventDispatcher->shouldReceive('dispatch')
                 ->once()
-                ->with(Mockery::type('Illuminate\Auth\Events\Validated'));
+                ->with(\Mockery::type('Illuminate\Auth\Events\Validated'));
         }
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Authenticated::class));
+            ->with(\Mockery::type(Authenticated::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Login::class));
+            ->with(\Mockery::type(Login::class));
 
         $token = $this->guard->claims(['foo' => 'bar'])->attempt($credentials);
 
@@ -236,8 +259,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertSame($token, 'foo.bar.baz');
     }
 
-    /** @test */
-    public function itShouldReturnTrueIfCredentialsAreOkAndUserIsFoundWhenChoosingNotToLogin()
+    public function testItShouldReturnTrueIfCredentialsAreOkAndUserIsFoundWhenChoosingNotToLogin()
     {
         $credentials = ['foo' => 'bar', 'baz' => 'bob'];
         $user = new LaravelUserStub();
@@ -254,28 +276,27 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->twice()
-            ->with(Mockery::type(Attempting::class));
+            ->with(\Mockery::type(Attempting::class));
 
         if (class_exists('Illuminate\Auth\Events\Validated')) {
             $this->eventDispatcher->shouldReceive('dispatch')
                 ->twice()
-                ->with(Mockery::type('Illuminate\Auth\Events\Validated'));
+                ->with(\Mockery::type('Illuminate\Auth\Events\Validated'));
         }
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->never()
-            ->with(Mockery::type(Authenticated::class));
+            ->with(\Mockery::type(Authenticated::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->never()
-            ->with(Mockery::type(Login::class));
+            ->with(\Mockery::type(Login::class));
 
         $this->assertTrue($this->guard->attempt($credentials, false)); // once
         $this->assertTrue($this->guard->validate($credentials)); // twice
     }
 
-    /** @test */
-    public function itShouldReturnFalseIfCredentialsAreInvalid()
+    public function testItShouldReturnFalseIfCredentialsAreInvalid()
     {
         $credentials = ['foo' => 'bar', 'baz' => 'bob'];
         $user = new LaravelUserStub();
@@ -292,32 +313,30 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Attempting::class));
+            ->with(\Mockery::type(Attempting::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Failed::class));
+            ->with(\Mockery::type(Failed::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->never()
-            ->with(Mockery::type(Authenticated::class));
+            ->with(\Mockery::type(Authenticated::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->never()
-            ->with(Mockery::type(Login::class));
+            ->with(\Mockery::type(Login::class));
 
         $this->assertFalse($this->guard->attempt($credentials));
     }
 
-    /** @test */
-    public function itShouldMagicallyCallTheJwtInstance()
+    public function testItShouldMagicallyCallTheJwtInstance()
     {
-        $this->jwt->shouldReceive('factory')->andReturn(Mockery::mock(Factory::class));
+        $this->jwt->shouldReceive('factory')->andReturn(\Mockery::mock(Factory::class));
         $this->assertInstanceOf(Factory::class, $this->guard->factory());
     }
 
-    /** @test */
-    public function itShouldLogoutTheUserByInvalidatingTheToken()
+    public function testItShouldLogoutTheUserByInvalidatingTheToken()
     {
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
         $this->jwt->shouldReceive('getToken')->once()->andReturn(true);
@@ -326,18 +345,36 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->never()
-            ->with(Mockery::type(Authenticated::class));
+            ->with(\Mockery::type(Authenticated::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Logout::class));
+            ->with(\Mockery::type(Logout::class));
 
         $this->guard->logout();
         $this->assertNull($this->guard->getUser());
     }
 
-    /** @test */
-    public function itShouldRefreshTheToken()
+    public function testItShouldLogoutTheUserEvenWithExpiredToken()
+    {
+        $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
+        $this->jwt->shouldReceive('getToken')->once()->andReturn(true);
+        $this->jwt->shouldReceive('invalidate')->andThrow(TokenExpiredException::class);
+        $this->jwt->shouldReceive('unsetToken')->once();
+
+        $this->eventDispatcher->shouldReceive('dispatch')
+            ->never()
+            ->with(\Mockery::type(Authenticated::class));
+
+        $this->eventDispatcher->shouldReceive('dispatch')
+            ->once()
+            ->with(\Mockery::type(Logout::class));
+
+        $this->guard->logout();
+        $this->assertNull($this->guard->getUser());
+    }
+
+    public function testItShouldRefreshTheToken()
     {
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
         $this->jwt->shouldReceive('getToken')->once()->andReturn(true);
@@ -346,8 +383,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertSame($this->guard->refresh(), 'foo.bar.baz');
     }
 
-    /** @test */
-    public function itShouldInvalidateTheToken()
+    public function testItShouldInvalidateTheToken()
     {
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
         $this->jwt->shouldReceive('getToken')->once()->andReturn(true);
@@ -356,8 +392,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertTrue($this->guard->invalidate());
     }
 
-    /** @test */
-    public function itShouldThrowAnExceptionIfThereIsNoTokenPresentWhenRequired()
+    public function testItShouldThrowAnExceptionIfThereIsNoTokenPresentWhenRequired()
     {
         $this->expectException(JWTException::class);
         $this->expectExceptionMessage('Token could not be parsed from the request.');
@@ -369,8 +404,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->guard->refresh();
     }
 
-    /** @test */
-    public function itShouldGenerateATokenById()
+    public function testItShouldGenerateATokenById()
     {
         $user = new LaravelUserStub();
 
@@ -386,17 +420,16 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->never()
-            ->with(Mockery::type(Authenticated::class));
+            ->with(\Mockery::type(Authenticated::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->never()
-            ->with(Mockery::type(Login::class));
+            ->with(\Mockery::type(Login::class));
 
         $this->assertSame('foo.bar.baz', $this->guard->tokenById(1));
     }
 
-    /** @test */
-    public function itShouldNotGenerateATokenById()
+    public function testItShouldNotGenerateATokenById()
     {
         $this->provider->shouldReceive('retrieveById')
             ->once()
@@ -406,8 +439,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertNull($this->guard->tokenById(1));
     }
 
-    /** @test */
-    public function itShouldAuthenticateTheUserByCredentialsAndReturnTrueIfValid()
+    public function testItShouldAuthenticateTheUserByCredentialsAndReturnTrueIfValid()
     {
         $credentials = ['foo' => 'bar', 'baz' => 'bob'];
         $user = new LaravelUserStub();
@@ -424,27 +456,26 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Attempting::class));
+            ->with(\Mockery::type(Attempting::class));
 
         if (class_exists('Illuminate\Auth\Events\Validated')) {
             $this->eventDispatcher->shouldReceive('dispatch')
                 ->once()
-                ->with(Mockery::type('Illuminate\Auth\Events\Validated'));
+                ->with(\Mockery::type('Illuminate\Auth\Events\Validated'));
         }
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Authenticated::class));
+            ->with(\Mockery::type(Authenticated::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->never()
-            ->with(Mockery::type(Login::class));
+            ->with(\Mockery::type(Login::class));
 
         $this->assertTrue($this->guard->once($credentials));
     }
 
-    /** @test */
-    public function itShouldAttemptToAuthenticateTheUserByCredentialsAndReturnFalseIfInvalid()
+    public function testItShouldAttemptToAuthenticateTheUserByCredentialsAndReturnFalseIfInvalid()
     {
         $credentials = ['foo' => 'bar', 'baz' => 'bob'];
         $user = new LaravelUserStub();
@@ -461,17 +492,16 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Attempting::class));
+            ->with(\Mockery::type(Attempting::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Failed::class));
+            ->with(\Mockery::type(Failed::class));
 
         $this->assertFalse($this->guard->once($credentials));
     }
 
-    /** @test */
-    public function itShouldAuthenticateTheUserByIdAndReturnBoolean()
+    public function testItShouldAuthenticateTheUserByIdAndReturnBoolean()
     {
         $user = new LaravelUserStub();
 
@@ -482,14 +512,13 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->twice()
-            ->with(Mockery::type(Authenticated::class));
+            ->with(\Mockery::type(Authenticated::class));
 
         $this->assertTrue($this->guard->onceUsingId(1)); // once
         $this->assertTrue($this->guard->byId(1)); // twice
     }
 
-    /** @test */
-    public function itShouldNotAuthenticateTheUserByIdAndReturnFalse()
+    public function testItShouldNotAuthenticateTheUserByIdAndReturnFalse()
     {
         $this->provider->shouldReceive('retrieveById')
             ->twice()
@@ -500,8 +529,7 @@ class JWTGuardTest extends AbstractTestCase
         $this->assertFalse($this->guard->byId(1)); // twice
     }
 
-    /** @test */
-    public function itShouldCreateATokenFromAUserObject()
+    public function testItShouldCreateATokenFromAUserObject()
     {
         $user = new LaravelUserStub();
 
@@ -517,28 +545,26 @@ class JWTGuardTest extends AbstractTestCase
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Authenticated::class));
+            ->with(\Mockery::type(Authenticated::class));
 
         $this->eventDispatcher->shouldReceive('dispatch')
             ->once()
-            ->with(Mockery::type(Login::class));
+            ->with(\Mockery::type(Login::class));
 
         $token = $this->guard->login($user);
 
         $this->assertSame('foo.bar.baz', $token);
     }
 
-    /** @test */
-    public function itShouldGetThePayload()
+    public function testItShouldGetThePayload()
     {
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
         $this->jwt->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
-        $this->jwt->shouldReceive('getPayload')->once()->andReturn(Mockery::mock(Payload::class));
+        $this->jwt->shouldReceive('getPayload')->once()->andReturn(\Mockery::mock(Payload::class));
         $this->assertInstanceOf(Payload::class, $this->guard->payload());
     }
 
-    /** @test */
-    public function itShouldBeMacroable()
+    public function testItShouldBeMacroable()
     {
         $this->guard->macro('foo', fn () => 'bar');
 

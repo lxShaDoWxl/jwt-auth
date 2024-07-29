@@ -12,7 +12,6 @@
 
 namespace PHPOpenSourceSaver\JWTAuth;
 
-use BadMethodCallException;
 use Illuminate\Auth\Events\Attempting;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Failed;
@@ -102,12 +101,32 @@ class JWTGuard implements Guard
         }
 
         if (
-            $this->jwt->setRequest($this->request)->getToken() &&
-            ($payload = $this->jwt->check(true)) &&
-            $this->validateSubject()
+            $this->jwt->setRequest($this->request)->getToken()
+            && ($payload = $this->jwt->check(true))
+            && $this->validateSubject()
         ) {
             return $this->user = $this->provider->retrieveById($payload['sub']);
         }
+    }
+
+    /**
+     * @return int|string|null
+     */
+    public function getUserId()
+    {
+        if (null !== $this->user) {
+            return $this->user->getAuthIdentifier();
+        }
+
+        if (
+            $this->jwt->setRequest($this->request)->getToken()
+            && ($payload = $this->jwt->check(true))
+            && $this->validateSubject()
+        ) {
+            return $payload['sub'];
+        }
+
+        return null;
     }
 
     /**
@@ -182,7 +201,11 @@ class JWTGuard implements Guard
      */
     public function logout($forceForever = false)
     {
-        $this->requireToken()->invalidate($forceForever);
+        try {
+            $this->requireToken()->invalidate($forceForever);
+        } catch (JWTException $e) {
+            // Proceed with the logout as normal if we can't invalidate the token
+        }
 
         $this->fireLogoutEvent($this->user);
 
@@ -218,8 +241,6 @@ class JWTGuard implements Guard
     /**
      * Create a new token by User id.
      *
-     * @param mixed $id
-     *
      * @return string|null
      */
     public function tokenById($id)
@@ -248,8 +269,6 @@ class JWTGuard implements Guard
     /**
      * Log the given User into the application.
      *
-     * @param mixed $id
-     *
      * @return bool
      */
     public function onceUsingId($id)
@@ -265,8 +284,6 @@ class JWTGuard implements Guard
 
     /**
      * Alias for onceUsingId.
-     *
-     * @param mixed $id
      *
      * @return bool
      */
@@ -319,6 +336,16 @@ class JWTGuard implements Guard
         $this->jwt->setToken($token);
 
         return $this;
+    }
+
+    /**
+     * Get the token ttl.
+     *
+     * @return int|null
+     */
+    public function getTTL()
+    {
+        return $this->jwt->factory()->getTTL();
     }
 
     /**
@@ -416,7 +443,6 @@ class JWTGuard implements Guard
     /**
      * Determine if the user matches the credentials.
      *
-     * @param mixed $user
      * @param array $credentials
      *
      * @return bool
@@ -453,7 +479,7 @@ class JWTGuard implements Guard
      *
      * @return JWT
      *
-     * @throws \PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException
+     * @throws JWTException
      */
     protected function requireToken()
     {
@@ -516,7 +542,7 @@ class JWTGuard implements Guard
     /**
      * Fire the authenticated event.
      *
-     * @param \Illuminate\Contracts\Auth\Authenticatable $user
+     * @param Authenticatable $user
      *
      * @return void
      */
@@ -531,8 +557,8 @@ class JWTGuard implements Guard
     /**
      * Fire the login event.
      *
-     * @param \Illuminate\Contracts\Auth\Authenticatable $user
-     * @param bool                                       $remember
+     * @param Authenticatable $user
+     * @param bool            $remember
      *
      * @return void
      */
@@ -548,8 +574,8 @@ class JWTGuard implements Guard
     /**
      * Fire the logout event.
      *
-     * @param \Illuminate\Contracts\Auth\Authenticatable $user
-     * @param bool                                       $remember
+     * @param Authenticatable $user
+     * @param bool            $remember
      *
      * @return void
      */
@@ -567,9 +593,7 @@ class JWTGuard implements Guard
      * @param string $method
      * @param array  $parameters
      *
-     * @return mixed
-     *
-     * @throws BadMethodCallException
+     * @throws \BadMethodCallException
      */
     public function __call($method, $parameters)
     {
@@ -581,6 +605,6 @@ class JWTGuard implements Guard
             return $this->macroCall($method, $parameters);
         }
 
-        throw new BadMethodCallException("Method [$method] does not exist.");
+        throw new \BadMethodCallException("Method [$method] does not exist.");
     }
 }
