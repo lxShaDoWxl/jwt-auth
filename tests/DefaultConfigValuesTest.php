@@ -44,6 +44,11 @@ class DefaultConfigValuesTest extends AbstractTestCase
         $this->assertEquals(60, $this->configuration['ttl']);
     }
 
+    public function testRefreshIatShouldBeSet()
+    {
+        $this->assertEquals(false, $this->configuration['refresh_iat']);
+    }
+
     public function testRefreshTtlShouldBeSet()
     {
         $this->assertEquals(20160, $this->configuration['refresh_ttl']);
@@ -108,5 +113,10 @@ class DefaultConfigValuesTest extends AbstractTestCase
         $this->assertEquals(Lcobucci::class, $this->configuration['providers']['jwt']);
         $this->assertEquals(AuthIlluminate::class, $this->configuration['providers']['auth']);
         $this->assertEquals(StorageIlluminate::class, $this->configuration['providers']['storage']);
+    }
+
+    public function testCookieKeyNameShouldBeSet()
+    {
+        $this->assertEquals('token', $this->configuration['cookie_key_name']);
     }
 }
